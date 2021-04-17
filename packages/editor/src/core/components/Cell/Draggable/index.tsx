@@ -17,8 +17,14 @@ const DefaultSmallHandle = ({ onClick }) => (
 type Props = {
   isLeaf?: boolean;
   nodeId: string;
+  onLayoutDblClick?: (e: React.MouseEvent) => void;
 };
-const Draggable: React.FC<Props> = ({ isLeaf, children, nodeId }) => {
+const Draggable: React.FC<Props> = ({
+  isLeaf,
+  children,
+  nodeId,
+  onLayoutDblClick,
+}) => {
   const cell = useCell(nodeId);
 
   const [isDragging, dragRef, previewElement] = useDragHandle(nodeId);
@@ -53,13 +59,13 @@ const Draggable: React.FC<Props> = ({ isLeaf, children, nodeId }) => {
               [`react-page-cell-draggable-inline-${cell.inline}`]: cell.inline,
               'react-page-cell-draggable-leaf': isLeaf,
             })}
+            onDoubleClick={onLayoutDblClick}
           ></div>
         ) : options.allowMoveInEditMode ? (
           <div ref={dragRef}>
             <ResizeHandle onClick={focus} />
           </div>
         ) : null}
-
         {children}
       </div>
     </>

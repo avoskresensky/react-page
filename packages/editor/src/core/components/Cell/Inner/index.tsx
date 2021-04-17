@@ -10,6 +10,8 @@ import {
   useIsEditMode,
   useIsFocused,
   useIsPreviewMode,
+  useIsLayoutMode,
+  useIsResizeMode,
   useNodeChildrenIds,
   usePluginOfCell,
   useSetEditMode,
@@ -27,6 +29,8 @@ import PluginComponent from '../PluginComponent';
 const Inner: React.FC<{ nodeId: string }> = ({ nodeId }) => {
   const isPreviewMode = useIsPreviewMode();
   const isEditMode = useIsEditMode();
+  const isLayoutMode = useIsLayoutMode();
+  const isResizeMode = useIsResizeMode();
   const cellShouldHavePlugin = useCellHasPlugin(nodeId);
   const plugin = usePluginOfCell(nodeId);
   const setEditMode = useSetEditMode();
@@ -48,26 +52,34 @@ const Inner: React.FC<{ nodeId: string }> = ({ nodeId }) => {
     cellSpacingY = normalizeCellSpacing(pluginCellSpacing).y;
   }
 
+  const switchToEditMode = React.useCallback(() => {
+    focus(false, 'onClick');
+    setEditMode();
+  }, [focus, setEditMode]);
+
   const onClick = React.useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const target = e.target as HTMLDivElement;
 
-      // check whether the click was inside cell-inner, but not inside a nested cell
       if (
-        !focused &&
-        isEditMode &&
-        // this arrives when they stop resizing
-        !target.classList.contains('react-page-row') &&
-        target?.closest &&
-        target.closest('.react-page-cell-inner') === ref.current &&
-        target.closest('.react-page-cell.react-page-cell-has-plugin') ===
-          ref.current.closest('.react-page-cell')
+        (e.type === 'click' && !focused && isEditMode) ||
+        (e.type === 'dblclick' && (isLayoutMode || isResizeMode))
       ) {
-        focus(false, 'onClick');
-        setEditMode();
+        console.log(target);
+        // check whether the click was inside cell-inner, but not inside a nested cell
+        if (
+          // this arrives when they stop resizing
+          !target.classList.contains('react-page-row') &&
+          target?.closest &&
+          target.closest('.react-page-cell-inner') === ref.current &&
+          target.closest('.react-page-cell.react-page-cell-has-plugin') ===
+            ref.current.closest('.react-page-cell')
+        ) {
+          switchToEditMode();
+        }
       }
     },
-    [focus, focused, isEditMode, setEditMode]
+    [focused, isEditMode, isResizeMode, isLayoutMode, switchToEditMode]
   );
   const insertAllowed = plugin?.childConstraints?.maxChildren
     ? plugin?.childConstraints?.maxChildren > childrenIds.length
@@ -82,9 +94,14 @@ const Inner: React.FC<{ nodeId: string }> = ({ nodeId }) => {
   }
   return (
     <Droppable nodeId={nodeId} isLeaf={!hasChildren}>
-      <Draggable nodeId={nodeId} isLeaf={!hasChildren}>
+      <Draggable
+        nodeId={nodeId}
+        isLeaf={!hasChildren}
+        onLayoutDblClick={switchToEditMode}
+      >
         <div
           onClick={!isPreviewMode ? onClick : undefined}
+          onDoubleClick={!isPreviewMode ? onClick : undefined}
           tabIndex={-1}
           style={{
             ...(cellStyle ?? {}),
